@@ -76,13 +76,13 @@ export const BOSS_CONFIG = {
 // ============================================================
 export const BOSS2_CONFIG = {
   name: '熔岩巨兽',
-  hp: 5000,
-  damage: 216,
-  speed: 65,
+  hp: 8000,
+  damage: 280,
+  speed: 85,
   collisionRadius: 40,
   attackRange: 55,
   attackWindup: 0.5,
-  attackCooldown: 1.2,
+  attackCooldown: 0.9,
   exp: 400,
   dodgeChance: 0,
 
@@ -104,19 +104,21 @@ export const BOSS2_CONFIG = {
     shakeIntensity: 10,
   },
 
-  // 阶段1: 100% → 40% 追逐+弹幕
+  // 阶段1: 100% → 40% 追逐+弹幕+召唤
   phase1: {
     speedMultiplier: 1.0,
     damageMultiplier: 1.0,
-    barrage: { count: 8, speed: 180, damage: 20, radius: 10, cooldown: 6, windup: 0.8 },
+    barrage: { count: 10, speed: 220, damage: 35, radius: 10, cooldown: 4.5, windup: 0.8 },
+    summon: { interval: 10, count: 10, intervalDecay: 0.5, minInterval: 3 },
   },
 
-  // 阶段2: 40% → 0% 加速+弹幕+射线
+  // 阶段2: 40% → 0% 加速+弹幕+射线+召唤
   phase2: {
-    speedMultiplier: 1.3,
-    damageMultiplier: 1.5,
-    barrage: { count: 12, speed: 200, damage: 25, radius: 12, cooldown: 4, windup: 0.6 },
-    ray: { cooldown: 8, windup: 1.2, duration: 2.0, width: 30, damage: 45, range: 600 },
+    speedMultiplier: 1.5,
+    damageMultiplier: 1.8,
+    barrage: { count: 16, speed: 240, damage: 45, radius: 12, cooldown: 3, windup: 0.6 },
+    ray: { cooldown: 8, windup: 1.2, duration: 2.0, width: 36, damage: 70, range: 600 },
+    summon: { interval: 8, count: 12, intervalDecay: 0.5, minInterval: 2 },
     color: '#ff2200',
   },
 

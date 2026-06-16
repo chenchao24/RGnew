@@ -48,6 +48,8 @@ export async function preloadSprites() {
     'assets/sprites/boss/boss_idle.png',
     'assets/sprites/boss/boss_phase2.png',
     'assets/sprites/boss/boss_phase3.png',
+    'assets/sprites/boss2/boss_idle.png',
+    'assets/sprites/boss2/boss_phase2.png',
     'assets/sprites/swords/sword_blade.png',
     'assets/sprites/swords/mage/sword_blade.png',
     'assets/sprites/mage/mage_front.png',

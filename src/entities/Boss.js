@@ -35,6 +35,7 @@ export class Boss {
     this.barrageCooldownTimer = pc.barrage ? pc.barrage.cooldown : 999;
     this.rayCooldownTimer = pc.ray ? pc.ray.cooldown : 999;
     this.summonTimer = 0;
+    this.summonWaveCount = 0;
 
     // 冲刺
     this.dashDirX = 0;
@@ -172,8 +173,13 @@ export class Boss {
         // 召唤检测
         if (pc.summon) {
           this.summonTimer += dt;
-          if (this.summonTimer >= pc.summon.interval) {
+          const currentInterval = Math.max(
+            pc.summon.minInterval || 2,
+            pc.summon.interval - (pc.summon.intervalDecay || 0) * this.summonWaveCount
+          );
+          if (this.summonTimer >= currentInterval) {
             this.summonTimer = 0;
+            this.summonWaveCount++;
             return { summon: true, count: pc.summon.count };
           }
         }

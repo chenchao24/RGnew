@@ -71,6 +71,7 @@ export class Player {
 
     // 无敌帧
     this.invincibleTimer = 0;
+    this._reviveInvincible = false;
 
     // 临时buff
     this.tempSwords = [];
@@ -162,6 +163,10 @@ export class Player {
     // 无敌帧倒计时
     if (this.invincibleTimer > 0) {
       this.invincibleTimer -= dt;
+      // 复活无敌结束后清除标记
+      if (this.invincibleTimer <= 0) {
+        this._reviveInvincible = false;
+      }
     }
 
     // 生命恢复
@@ -269,7 +274,11 @@ export class Player {
    * @returns {object} { dodged, damage, died }
    */
   takeDamage(rawDamage) {
-    if (this.invincibleTimer > 0) return { dodged: false, damage: 0, died: false };
+    // 普通无敌帧：跳过伤害（保持原有机制）
+    if (this.invincibleTimer > 0 && !this._reviveInvincible) return { dodged: false, damage: 0, died: false };
+
+    // 复活无敌期间：受伤但不致死，HP最低保留1
+    const isReviveInvincible = this._reviveInvincible === true;
 
     // 受击取消瞬移读条
     this.cancelBlink();
@@ -301,12 +310,20 @@ export class Player {
     this.hp -= finalDamage;
     this.invincibleTimer = BALANCE.DODGE_INVINCIBLE_TIME;
 
+    // 复活无敌期间：HP最低保留1，不会再次死亡
+    if (isReviveInvincible && this.hp <= 0) {
+      this.hp = 1;
+      this.invincibleTimer = 0.15; // 短暂无敌防止连续帧被打
+      return { dodged: false, damage: finalDamage, died: false };
+    }
+
     if (this.hp <= 0) {
       // 复活检查
       if (this.hasRevive && !this.reviveUsed) {
         this.reviveUsed = true;
         this.hp = Math.round(this.maxHp * 0.5);
-        this.invincibleTimer = 1;
+        this.invincibleTimer = 2; // 复活无敌2秒，但期间记录伤害延迟结算
+        this._reviveInvincible = true; // 标记复活无敌状态
         return { dodged: false, damage: finalDamage, died: false, revived: true };
       }
       this.hp = 0;

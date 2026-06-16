@@ -52,12 +52,17 @@ export class LevelSystem {
   }
 
   /**
-   * 计算升到第N级所需的经验
-   * ExpToLevel(N) = Σ[k=2..N] (5k + 10)
+   * 计算升到下一级所需的经验
+   * 使用二次曲线，等级越高升级越慢
+   * ExpToNext(n) = 8 + 3*n + 0.5*n^2
+   * n=2: 8+6+2 = 16
+   * n=10: 8+30+50 = 88
+   * n=20: 8+60+200 = 268
+   * n=35: 8+105+612 = 725
    */
   _calcExpToNext(n) {
     if (n <= 1) return 0;
-    return 5 * n + 10;
+    return Math.round(8 + 3 * n + 0.5 * n * n);
   }
 
   /**

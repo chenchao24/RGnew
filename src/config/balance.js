@@ -1,0 +1,76 @@
+/**
+ * 全局平衡与常量配置
+ * 所有影响游戏平衡的核心数值集中在此，方便后期调校
+ */
+
+export const BALANCE = {
+  // === 画布 ===
+  CANVAS_WIDTH: 1200,
+  CANVAS_HEIGHT: 800,
+  TARGET_FPS: 60,
+
+  // === 波次时间 ===
+  WAVE_DURATION: 40, // 每波持续秒数
+  WAVE_TRANSITION_DELAY: 1, // 清完到下一波的延迟
+  BOSS_SPAWN_DELAY: 3, // 第6波清完到Boss出现的延迟
+
+  // === 生成约束 ===
+  MAX_MONSTERS_ON_SCREEN: 80,
+  SAFE_SPAWN_DISTANCE: 200,
+  SPAWN_MARGIN: 10,
+  MAX_SPAWN_ATTEMPTS: 50,
+  SPAWN_DELAY_RANGE: [0, 0.5], // 生成延迟范围
+
+  // === 闪避机制 ===
+  DODGE_INVINCIBLE_TIME: 0.3, // 秒
+
+  // === 暴击 ===
+  CRIT_MULTIPLIER: 2.0,
+
+  // === 元素伤害 ===
+  FIRE_DOT_DURATION: 3,
+  FIRE_DOT_DPS: 3,
+  FROST_SLOW_PERCENT: 0.3,
+  FROST_DURATION: 2,
+  LIGHTNING_CHAIN_COUNT: 3,
+  LIGHTNING_CHAIN_DAMAGE: 0.5,
+  POISON_DOT_DURATION: 6,
+  POISON_DOT_DPS: 2,
+  POISON_MAX_STACKS: 5,
+  ELEMENT_MASTERY_DURATION_BONUS: 0.5, // 每层+50%
+
+  // === 道具 ===
+  ITEM_LIFETIME: 30,
+  ITEM_BLINK_TIME: 5,
+  TEMP_SWORD_DURATION: 10,
+  TEMP_SWORD_MAX: 3,
+  POWERUP_DURATION: 8,
+  SPEEDUP_DURATION: 8,
+  SHIELD_DURATION: 15,
+
+  // === 减伤 ===
+  STEEL_WILL_REDUCTION: 0.2,
+  STEEL_WILL_LOW_HP_REDUCTION: 0.4,
+  STEEL_WIL_LOW_HP_THRESHOLD: 0.3,
+
+  // === 斩杀 ===
+  EXECUTE_THRESHOLD: 0.15,
+
+  // === 击退 ===
+  KNOCKBACK_DISTANCE: 50,
+  KNOCKBACK_STUN: 0.3,
+
+  // === 定身光环 ===
+  SLOW_AURA_RADIUS: 60,
+  SLOW_AURA_PERCENT: 0.4,
+
+  // === 引力场 ===
+  GRAVITY_PULL_SPEED: 40, // px/s
+
+  // === 伤害数字 ===
+  DAMAGE_NUMBER_LIFETIME: 1.0,
+  DAMAGE_NUMBER_RISE_SPEED: 60,
+
+  // === 波次间最大弹幕数 ===
+  MAX_RANGED_SHOOTING: 3,
+};

@@ -79,6 +79,8 @@ export class Player {
     this.atkUpMultiplier = 1;
     this.spdUpTimer = 0;
     this.spdUpMultiplier = 1;
+    this.slowTimer = 0;
+    this.slowMultiplier = 1;
     this.tempShieldTimer = 0;
     this.tempShieldActive = false;
 
@@ -99,6 +101,9 @@ export class Player {
     // 跨关卡加成
     this.currentStage = 1;        // 当前关卡索引
     this.stageBonus = null;       // { hpMult, atkMult, spdMult, dodgeMult, rangeMult }
+
+    // 测试模式标记
+    this.isTestMode = false;
   }
 
   update(dt, inputManager, canvasWidth, canvasHeight) {
@@ -113,9 +118,11 @@ export class Player {
     if (rHeld) {
       // R键模式：按住R向面朝方向移动
       this._useKeyboardMode = true;
-      const currentMaxSpeed = this.moveSpeed * this.spdUpMultiplier;
+      const currentMaxSpeed = this.moveSpeed * this.spdUpMultiplier * this.slowMultiplier;
       const dirX = Math.cos(this.facingAngle);
       const dirY = Math.sin(this.facingAngle);
+
+
 
       this.vx = lerp(this.vx, dirX * currentMaxSpeed, PLAYER_CONFIG.MOVE_ACCEL * dt / Math.max(currentMaxSpeed, 1));
       this.vy = lerp(this.vy, dirY * currentMaxSpeed, PLAYER_CONFIG.MOVE_ACCEL * dt / Math.max(currentMaxSpeed, 1));
@@ -134,7 +141,7 @@ export class Player {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist > 3) {
-        const currentMaxSpeed = this.moveSpeed * this.spdUpMultiplier;
+        const currentMaxSpeed = this.moveSpeed * this.spdUpMultiplier * this.slowMultiplier;
         const speed = Math.min(dist * PLAYER_CONFIG.MOUSE_FOLLOW_SMOOTH, currentMaxSpeed);
         this.vx = (dx / dist) * speed;
         this.vy = (dy / dist) * speed;
@@ -195,6 +202,11 @@ export class Player {
     if (this.spdUpTimer > 0) {
       this.spdUpTimer -= dt;
       if (this.spdUpTimer <= 0) this.spdUpMultiplier = 1;
+    }
+    // 减速效果
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+      if (this.slowTimer <= 0) this.slowMultiplier = 1;
     }
     if (this.tempShieldTimer > 0) {
       this.tempShieldTimer -= dt;
@@ -274,6 +286,12 @@ export class Player {
    * @returns {object} { dodged, damage, died }
    */
   takeDamage(rawDamage) {
+    // 测试模式：大幅减伤，不会死亡
+    if (this.isTestMode) {
+      this.invincibleTimer = 0.1;
+      return { dodged: false, damage: 0, died: false };
+    }
+
     // 普通无敌帧：跳过伤害（保持原有机制）
     if (this.invincibleTimer > 0 && !this._reviveInvincible) return { dodged: false, damage: 0, died: false };
 
@@ -310,6 +328,9 @@ export class Player {
     this.hp -= finalDamage;
     this.invincibleTimer = BALANCE.DODGE_INVINCIBLE_TIME;
 
+    // NaN保护
+    if (isNaN(this.hp)) this.hp = 0;
+
     // 复活无敌期间：HP最低保留1，不会再次死亡
     if (isReviveInvincible && this.hp <= 0) {
       this.hp = 1;
@@ -338,6 +359,16 @@ export class Player {
    */
   getTotalSwordCount() {
     return this.swordCount + this.tempSwords.length;
+  }
+
+  /**
+   * 应用减速效果
+   * @param {number} slowPercent - 减速百分比(0-1)
+   * @param {number} duration - 持续时间(秒)
+   */
+  applySlow(slowPercent, duration) {
+    this.slowMultiplier = 1 - slowPercent;
+    this.slowTimer = duration;
   }
 
   /**

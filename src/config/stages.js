@@ -21,6 +21,15 @@ export const STAGES = [
     waveCount: 10,
     bossId: 'molten_behemoth',
   },
+  {
+    id: 3,
+    name: '地狱裂隙',
+    subtitle: 'Hell Rift',
+    background: 'assets/bg/stage3/ground.png',
+    waveCount: 10,
+    bossId: 'hell_lord',
+    warningText: '⚠ 进入地狱挑战 ⚠',
+  },
 ];
 
 /**

@@ -34,6 +34,7 @@ const STATE = {
   GAME_OVER: 'game_over',
   VICTORY: 'victory',
   STAGE_TRANSITION: 'stage_transition',
+  TEST_MODE: 'test_mode',
 };
 
 // 角色配置
@@ -85,7 +86,7 @@ export class Game {
     this.collision = new CollisionSystem(this.width, this.height);
 
     this.currentStage = 1;
-    this.waveManager = new WaveManager(getWaveConfigsForStage(1));
+    this.waveManager = new WaveManager(getWaveConfigsForStage(1), 1);
     this.buffSystem = new BuffSystem();
     this.levelSystem = new LevelSystem();
     this.damageSystem = new DamageSystem();
@@ -113,6 +114,12 @@ export class Game {
     this.stageTransitionTimer = 0;
     this.stageTransitionDuration = 2.0;
 
+    // Boss关小怪刷新（第三关Boss）
+    this.bossMinionTimer = 0;
+
+    // 怒吼文字
+    this.bossRoarTimer = 0;
+
     this._initBackground();
   }
 
@@ -135,8 +142,9 @@ export class Game {
     } else {
       // 无图片时使用关卡主题色网格背景
       const isStage2 = this.currentStage >= 2;
-      const bgColor = isStage2 ? '#1a0a08' : '#111118';
-      const gridColor = isStage2 ? 'rgba(80,30,20,0.5)' : 'rgba(40,40,60,0.5)';
+      const isStage3 = this.currentStage >= 3;
+      const bgColor = isStage3 ? '#0a0508' : isStage2 ? '#1a0a08' : '#111118';
+      const gridColor = isStage3 ? 'rgba(60,15,10,0.5)' : isStage2 ? 'rgba(80,30,20,0.5)' : 'rgba(40,40,60,0.5)';
 
       bgCtx.fillStyle = bgColor;
       bgCtx.fillRect(0, 0, this.width, this.height);
@@ -185,7 +193,7 @@ export class Game {
     this.waitingForBoss = false;
     this.buffChoices = [];
 
-    this.waveManager = new WaveManager(getWaveConfigsForStage(this.currentStage));
+    this.waveManager = new WaveManager(getWaveConfigsForStage(this.currentStage), this.currentStage);
     this.buffSystem = new BuffSystem();
     this.levelSystem = new LevelSystem();
     this.damageSystem = new DamageSystem();
@@ -197,9 +205,199 @@ export class Game {
     this.waveManager.startNextWave();
   }
 
+  // ============ 测试模式 ============
+
   /**
-   * 进入下一关
+   * 显示测试模式UI（密码验证 + 关卡选择）
    */
+  _showTestModeUI() {
+    const container = document.getElementById('ui-layer');
+    container.innerHTML = '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'test-overlay';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:100;';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:rgba(20,25,40,0.95);border:2px solid rgba(68,136,255,0.5);border-radius:12px;padding:30px 40px;width:380px;text-align:center;color:#ccc;font-family:"Segoe UI","Microsoft YaHei",sans-serif;';
+
+    // 密码输入阶段
+    panel.innerHTML = `
+      <h3 style="color:#88ccff;margin-bottom:20px;font-size:20px;">🔒 测试通道</h3>
+      <p style="color:#8899aa;font-size:14px;margin-bottom:15px;">请输入测试密码</p>
+      <input id="test-password" type="password" placeholder="输入密码" style="width:200px;padding:10px 15px;border:1px solid rgba(68,136,255,0.4);border-radius:6px;background:rgba(30,35,50,0.9);color:#fff;font-size:16px;text-align:center;outline:none;" />
+      <div style="margin-top:15px;">
+        <button id="test-verify" style="padding:8px 30px;background:rgba(68,136,255,0.3);border:1px solid rgba(68,136,255,0.6);border-radius:6px;color:#88ccff;cursor:pointer;font-size:14px;">验证</button>
+        <button id="test-cancel" style="padding:8px 20px;background:rgba(100,60,60,0.3);border:1px solid rgba(180,100,100,0.4);border-radius:6px;color:#aa8888;cursor:pointer;font-size:14px;margin-left:10px;">取消</button>
+      </div>
+      <p id="test-error" style="color:#ff6644;font-size:12px;margin-top:10px;min-height:16px;"></p>
+    `;
+
+    overlay.appendChild(panel);
+    container.appendChild(overlay);
+
+    document.getElementById('test-verify').onclick = () => {
+      const pwd = document.getElementById('test-password').value;
+      if (pwd === '1111') {
+        this._showTestSelector(panel);
+      } else {
+        document.getElementById('test-error').textContent = '密码错误，请重新输入';
+        document.getElementById('test-password').value = '';
+      }
+    };
+
+    document.getElementById('test-cancel').onclick = () => {
+      this._hideTestModeUI();
+      this.state = STATE.TITLE;
+    };
+  }
+
+  /**
+   * 密码验证成功后显示关卡选择器
+   */
+  _showTestSelector(panel) {
+    const stage1Waves = getWaveCountForStage(1);
+    const stage2Waves = getWaveCountForStage(2);
+    const stage3Waves = getWaveCountForStage(3);
+
+    panel.innerHTML = `
+      <h3 style="color:#88ccff;margin-bottom:20px;font-size:20px;">🧪 测试模式</h3>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aabbcc;font-size:14px;display:block;margin-bottom:5px;">选择关卡</label>
+        <select id="test-stage" style="width:200px;padding:8px 12px;border:1px solid rgba(68,136,255,0.4);border-radius:6px;background:rgba(30,35,50,0.9);color:#fff;font-size:14px;outline:none;">
+          <option value="1">第一关 - 暗影森林</option>
+          <option value="2">第二关 - 熔岩深渊</option>
+          <option value="3">第三关 - 地狱裂隙</option>
+        </select>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aabbcc;font-size:14px;display:block;margin-bottom:5px;">选择波次</label>
+        <select id="test-wave" style="width:200px;padding:8px 12px;border:1px solid rgba(68,136,255,0.4);border-radius:6px;background:rgba(30,35,50,0.9);color:#fff;font-size:14px;outline:none;">
+          ${this._buildWaveOptions(1, stage1Waves)}
+        </select>
+      </div>
+      <div style="margin-bottom:15px;">
+        <label style="color:#aabbcc;font-size:14px;display:block;margin-bottom:5px;">是否直接打Boss</label>
+        <select id="test-boss" style="width:200px;padding:8px 12px;border:1px solid rgba(68,136,255,0.4);border-radius:6px;background:rgba(30,35,50,0.9);color:#fff;font-size:14px;outline:none;">
+          <option value="0">正常波次</option>
+          <option value="1">直接Boss</option>
+        </select>
+      </div>
+      <p style="color:#ffcc00;font-size:12px;margin-bottom:15px;">⚠ 测试模式：HP=1000 攻击力=1000</p>
+      <div style="margin-top:5px;">
+        <button id="test-start" style="padding:10px 40px;background:rgba(68,136,255,0.4);border:1px solid rgba(68,136,255,0.7);border-radius:6px;color:#88ccff;cursor:pointer;font-size:16px;font-weight:bold;">开始测试</button>
+        <button id="test-back" style="padding:8px 20px;background:rgba(100,60,60,0.3);border:1px solid rgba(180,100,100,0.4);border-radius:6px;color:#aa8888;cursor:pointer;font-size:14px;margin-left:10px;">返回</button>
+      </div>
+    `;
+
+    // 关卡切换时更新波次下拉列表
+    document.getElementById('test-stage').onchange = (e) => {
+      const stage = parseInt(e.target.value);
+      const waveSelect = document.getElementById('test-wave');
+      waveSelect.innerHTML = this._buildWaveOptions(stage, getWaveCountForStage(stage));
+    };
+
+    document.getElementById('test-start').onclick = () => {
+      const stage = parseInt(document.getElementById('test-stage').value);
+      const wave = parseInt(document.getElementById('test-wave').value);
+      const isBoss = parseInt(document.getElementById('test-boss').value) === 1;
+      this._hideTestModeUI();
+      this.startTestGame(stage, wave, isBoss);
+    };
+
+    document.getElementById('test-back').onclick = () => {
+      this._hideTestModeUI();
+      this.state = STATE.TITLE;
+    };
+  }
+
+  _buildWaveOptions(stage, totalWaves) {
+    let options = '';
+    for (let i = 1; i <= totalWaves; i++) {
+      options += `<option value="${i}">第 ${i} 波</option>`;
+    }
+    options += `<option value="${totalWaves + 1}">Boss</option>`;
+    return options;
+  }
+
+  _hideTestModeUI() {
+    const container = document.getElementById('ui-layer');
+    container.innerHTML = '';
+  }
+
+  /**
+   * 测试模式启动游戏
+   * @param {number} stage - 关卡（1或2）
+   * @param {number} wave - 波次（1-based，如果超过总波数则直接Boss）
+   * @param {boolean} isBoss - 是否直接打Boss
+   */
+  startTestGame(stage, wave, isBoss) {
+    this.currentStage = stage;
+    this.state = STATE.PLAYING;
+
+    // 默认圣骑士
+    this.selectedHero = HEROES[0];
+    const heroId = this.selectedHero.id;
+
+    // 创建玩家并设置测试属性
+    this.player = new Player(this.width / 2, this.height / 2, heroId);
+    this.player.hp = 1000;
+    this.player.maxHp = 1000;
+    this.player.currentStage = stage;
+
+    // 测试模式攻击力：剑基础伤害设为1000
+    this.player.swordDamage = 1000;
+    this.player.isTestMode = true;
+
+    this.swords = [];
+    this.monsters = [];
+    this.projectiles = [];
+    this.boss = null;
+    this.gameTime = 0;
+    this.survivalTime = 0;
+    this.trailTimer = 0;
+    this.waveTransitionTimer = 0;
+    this.bossSpawnTimer = 0;
+    this.waitingForBoss = false;
+    this.buffChoices = [];
+
+    this.waveManager = new WaveManager(getWaveConfigsForStage(stage), stage);
+    this.buffSystem = new BuffSystem();
+    this.levelSystem = new LevelSystem();
+    this.damageSystem = new DamageSystem();
+    this.dropSystem = new DropSystem();
+    this.particles.clear();
+
+    this._initBackground();
+    this._rebuildSwords();
+
+    const totalWaves = this.waveManager.totalWaves;
+
+    if (isBoss || wave > totalWaves) {
+      // 直接跳到Boss：跳过所有波次
+      this.waveManager.currentWave = totalWaves;
+      this.waveManager.allWavesComplete = true;
+      this.waveManager.waveActive = false;
+      this.waveManager.bossSpawned = true;
+      this.waitingForBoss = false;
+      this.bossSpawnTimer = 0;
+      this.monsters = [];
+
+      // 立即生成Boss
+      const bossConfig = getBossConfigForStage(stage);
+      this.boss = new Boss(this.width / 2, this.height * 0.3, bossConfig);
+      // Boss进场怒吼
+      if (this.boss.config.roars && this.boss.config.roars.spawn) {
+        this.boss.triggerSpawnRoar();
+      }
+    } else {
+      // 跳到指定波次：先跳过前面的波次
+      this.waveManager.currentWave = wave - 1;
+      this.waveManager.startNextWave();
+    }
+
+    this.isTestMode = true;
+  }
   startNextStage() {
     // 保存当前等级用于计算加成
     const completedLevel = this.levelSystem.getLevel();
@@ -222,7 +420,7 @@ export class Game {
     this.survivalTime = 0;
 
     // 重建波次管理器
-    this.waveManager = new WaveManager(getWaveConfigsForStage(this.currentStage));
+    this.waveManager = new WaveManager(getWaveConfigsForStage(this.currentStage), this.currentStage);
     this.dropSystem = new DropSystem();
     this.particles.clear();
 
@@ -280,6 +478,13 @@ export class Game {
 
     // === 玩家更新 ===
     this.player.update(dt, this.input, this.width, this.height);
+
+    // 测试模式：锁定HP和攻击力
+    if (this.isTestMode) {
+      this.player.maxHp = 1000;
+      this.player.hp = 1000;
+      this.player.swordDamage = 1000;
+    }
 
     // 右键瞬移（法师技能）
     if (this.input.rightMouseClicked && this.player.heroId === 'mage') {
@@ -381,6 +586,15 @@ export class Game {
         }
       }
 
+      // 震荡怪震荡波减速
+      if (result && result.shockWave) {
+        const dist = distance(this.player.x, this.player.y, result.x, result.y);
+        if (dist <= result.radius + this.player.collisionRadius) {
+          this.player.applySlow(result.slowPercent, result.slowDuration);
+          this.damageSystem._addDamageNumber(this.player.x, this.player.y - 20, 0, 'dodge');
+        }
+      }
+
       // 自爆怪爆炸
       if (result && result.exploded) {
         const dist = distance(this.player.x, this.player.y, result.x, result.y);
@@ -440,6 +654,23 @@ export class Game {
             this.projectiles.push({ ...proj, alive: true, lifetime: 5 });
           }
         }
+        // Boss3 十字光波光柱伤害
+        if (bossResult.crossWaveBeams) {
+          for (const beam of bossResult.crossWaveBeams) {
+            if (beam.damage > 0) {
+              const rayResult = { dirX: beam.dirX, dirY: beam.dirY, width: beam.width, range: beam.range };
+              if (this._isPlayerInRay(rayResult)) {
+                const hitResult = this.player.takeDamage(beam.damage);
+                if (hitResult.damage > 0) {
+                  this.damageSystem._addDamageNumber(this.player.x, this.player.y - 20, hitResult.damage, 'player_hit');
+                  this.shakeTimer = 0.1;
+                  this.shakeIntensity = 3;
+                }
+                if (hitResult.died) { this.state = STATE.GAME_OVER; this.input.resetFrame(); return; }
+              }
+            }
+          }
+        }
         // Boss射线伤害
         if (bossResult.ray && bossResult.damage > 0) {
           if (this._isPlayerInRay(bossResult)) {
@@ -462,9 +693,32 @@ export class Game {
             const nm = new Monster('NORMAL',
               Math.max(20, Math.min(this.width - 20, spawnX)),
               Math.max(20, Math.min(this.height - 20, spawnY)),
-              waveCfg);
+              waveCfg, this.currentStage);
             this.monsters.push(nm);
           }
+        }
+        // Boss3 陨石雨伤害
+        if (bossResult.meteorHits) {
+          for (const hit of bossResult.meteorHits) {
+            const hitResult = this.player.takeDamage(hit.damage);
+            if (hitResult.damage > 0) {
+              this.damageSystem._addDamageNumber(this.player.x, this.player.y - 20, hitResult.damage, 'player_hit');
+            }
+            if (hitResult.died) { this.state = STATE.GAME_OVER; this.input.resetFrame(); return; }
+          }
+        }
+        // Boss3 陨石雨震动
+        if (bossResult.shake) {
+          this.shakeTimer = bossResult.shake.duration || 0.3;
+          this.shakeIntensity = bossResult.shake.intensity || 8;
+        }
+        // Boss3 烈焰伤害
+        if (bossResult.flameAura && bossResult.damage > 0) {
+          const hitResult = this.player.takeDamage(bossResult.damage);
+          if (hitResult.damage > 0) {
+            this.damageSystem._addDamageNumber(this.player.x, this.player.y - 20, hitResult.damage, 'player_hit');
+          }
+          if (hitResult.died) { this.state = STATE.GAME_OVER; this.input.resetFrame(); return; }
         }
       }
 
@@ -531,7 +785,8 @@ export class Game {
 
     const aliveCount = this.monsters.filter(m => m.alive).length;
     if (this.waveManager.isWaveComplete(aliveCount)) {
-      this.waveManager.waveActive = false;
+      // 清除未刷出的怪物和增援
+      this.waveManager.clearPendingSpawns();
       this.waveTransitionTimer = BALANCE.WAVE_TRANSITION_DELAY;
     }
 
@@ -554,19 +809,43 @@ export class Game {
         const bossConfig = getBossConfigForStage(this.currentStage);
         this.boss = new Boss(this.width / 2, this.height / 2, bossConfig);
         this.waitingForBoss = false;
+        // Boss3进场怒吼（进场前5秒显示）
+        if (this.boss.config.roars && this.boss.config.roars.spawn) {
+          this.boss.triggerSpawnRoar();
+        }
       }
     }
 
-    if (this.waveManager.waveActive && this.waveManager.waveTimer <= 0) {
-      this.waveManager.waveActive = false;
-      if (this.waveManager.currentWave < totalWaves) {
-        this.waveManager.startNextWave();
-      } else {
-        this.waveManager.allWavesComplete = true;
-        this.waitingForBoss = true;
-        this.bossSpawnTimer = BALANCE.BOSS_SPAWN_DELAY;
+    // Boss关小怪刷新（第三关Boss）
+    if (this.boss && this.boss.alive && this.boss.config.bossMinion) {
+      this.bossMinionTimer -= dt;
+      if (this.bossMinionTimer <= 0) {
+        const bm = this.boss.config.bossMinion;
+        this.bossMinionTimer = bm.interval;
+        const waveCfg = this.waveManager.getCurrentWaveConfig() || { hpMultiplier: 5, damageMultiplier: 2, speedMultiplier: 1.3, expMultiplier: 1.5 };
+        for (let i = 0; i < bm.count; i++) {
+          const type = bm.types[i % bm.types.length];
+          const side = Math.floor(Math.random() * 4);
+          const margin = 30;
+          let sx, sy;
+          switch (side) {
+            case 0: sx = Math.random() * this.width; sy = margin; break;
+            case 1: sx = Math.random() * this.width; sy = this.height - margin; break;
+            case 2: sx = margin; sy = Math.random() * this.height; break;
+            default: sx = this.width - margin; sy = Math.random() * this.height; break;
+          }
+          const nm = new Monster(type, sx, sy, waveCfg, this.currentStage);
+          this.monsters.push(nm);
+        }
       }
     }
+
+    // Boss怒吼文字更新
+    if (this.boss && this.boss.alive) {
+      this.boss.updateRoar(dt);
+    }
+
+
 
     // === 道具拾取 ===
     const pickupResults = this.dropSystem.processPickup(this.player);
@@ -688,6 +967,7 @@ export class Game {
     ctx.clearRect(0, 0, this.width, this.height);
     switch (this.state) {
       case STATE.TITLE: this._renderTitle(ctx); break;
+      case STATE.TEST_MODE: this._renderTitle(ctx); break;
       case STATE.SELECT_HERO: this._renderSelectHero(ctx); break;
       case STATE.PLAYING: case STATE.PAUSED:
         this._renderGame(ctx);
@@ -786,6 +1066,21 @@ export class Game {
     ctx.fillStyle = '#556677';
     ctx.font = '12px "Segoe UI", sans-serif';
     ctx.fillText('v1.0', cx, this.height - 20);
+
+    // 测试通道按钮（右下角小按钮）
+    const testBtnW = 100, testBtnH = 28;
+    const testBtnX = this.width - testBtnW - 15, testBtnY = this.height - 50;
+    const testPulse = 0.7 + Math.sin(performance.now() * 0.004) * 0.15;
+    ctx.fillStyle = `rgba(100,60,60,${testPulse})`;
+    ctx.fillRect(testBtnX, testBtnY, testBtnW, testBtnH);
+    ctx.strokeStyle = 'rgba(180,100,100,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(testBtnX, testBtnY, testBtnW, testBtnH);
+    ctx.fillStyle = '#aa8888';
+    ctx.font = '12px "Segoe UI", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('测试通道', testBtnX + testBtnW / 2, testBtnY + 18);
+    ctx.textAlign = 'left';
   }
 
   _renderSelectHero(ctx) {
@@ -981,6 +1276,10 @@ export class Game {
     this.damageSystem.renderDamageNumbers(ctx);
     ctx.restore();
     this._renderHUD(ctx);
+    // Boss怒吼文字渲染
+    if (this.boss && this.boss.alive) {
+      this.boss.renderRoar(ctx, this.width, this.height);
+    }
   }
 
   _renderHUD(ctx) {
@@ -991,7 +1290,8 @@ export class Game {
     ctx.fillRect(hpX - 2, hpY - 2, hpW + 4, hpH + 4);
     ctx.fillStyle = '#333';
     ctx.fillRect(hpX, hpY, hpW, hpH);
-    const hpR = p.hp / p.maxHp;
+    let hpR = p.maxHp > 0 ? p.hp / p.maxHp : 0;
+    if (isNaN(hpR)) hpR = 0;
     ctx.fillStyle = hpR > 0.5 ? '#44cc44' : hpR > 0.25 ? '#ccaa22' : '#cc4444';
     ctx.fillRect(hpX, hpY, hpW * hpR, hpH);
     ctx.fillStyle = '#fff';
@@ -1356,35 +1656,69 @@ export class Game {
       alpha = 1;
     }
 
-    ctx.fillStyle = `rgba(0,0,0,${0.85 * alpha})`;
-    ctx.fillRect(0, 0, this.width, this.height);
+    // 第三关特殊过渡：暗红色 + 警告文字
+    const isStage3 = nextStage.id === 3;
+    if (isStage3) {
+      ctx.fillStyle = `rgba(30,5,5,${0.9 * alpha})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+    } else {
+      ctx.fillStyle = `rgba(0,0,0,${0.85 * alpha})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
 
     ctx.globalAlpha = alpha;
 
-    // 关卡名称
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 48px "Segoe UI", "Microsoft YaHei", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`第 ${nextStage.id} 关`, cx, cy - 40);
+    if (isStage3 && nextStage.warningText) {
+      // 第三关：恐怖警告风格
+      ctx.fillStyle = '#ff2200';
+      ctx.font = 'bold 42px "Microsoft YaHei", "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      const jitter = Math.sin(performance.now() * 0.02) * 3;
+      ctx.fillText(nextStage.warningText, cx, cy - 30 + jitter);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px "Segoe UI", "Microsoft YaHei", sans-serif';
-    ctx.fillText(nextStage.name, cx, cy + 20);
+      ctx.fillStyle = '#ff6644';
+      ctx.font = 'bold 36px "Microsoft YaHei", "Segoe UI", sans-serif';
+      ctx.fillText(nextStage.name, cx, cy + 30);
 
-    // 等级加成提示
-    const completedLevel = this.levelSystem.getLevel();
-    const bonus = calculateStageBonus(completedLevel);
-    ctx.fillStyle = '#88cc88';
-    ctx.font = '16px "Segoe UI", "Microsoft YaHei", sans-serif';
-    ctx.fillText(`等级 ${completedLevel} 加成: 生命+${Math.round((bonus.hpMult - 1) * 100)}% 攻击+${Math.round((bonus.atkMult - 1) * 100)}%`, cx, cy + 65);
+      ctx.fillStyle = '#884422';
+      ctx.font = '16px "Microsoft YaHei", sans-serif';
+      ctx.fillText(`等级 ${this.levelSystem.getLevel()} 加成已应用`, cx, cy + 75);
+    } else {
+      // 普通过渡
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 48px "Segoe UI", "Microsoft YaHei", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`第 ${nextStage.id} 关`, cx, cy - 40);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px "Segoe UI", "Microsoft YaHei", sans-serif';
+      ctx.fillText(nextStage.name, cx, cy + 20);
+
+      const completedLevel = this.levelSystem.getLevel();
+      const bonus = calculateStageBonus(completedLevel);
+      ctx.fillStyle = '#88cc88';
+      ctx.font = '16px "Segoe UI", "Microsoft YaHei", sans-serif';
+      ctx.fillText(`等级 ${completedLevel} 加成: 生命+${Math.round((bonus.hpMult - 1) * 100)}% 攻击+${Math.round((bonus.atkMult - 1) * 100)}%`, cx, cy + 65);
+    }
 
     ctx.globalAlpha = 1;
     ctx.textAlign = 'left';
   }
 
   handleClick(x, y) {
-    if (this.state === STATE.TITLE) {
-      this.state = STATE.SELECT_HERO;
+    if (this.state === STATE.TITLE || this.state === STATE.TEST_MODE) {
+      // 检测测试通道按钮
+      const testBtnW = 100, testBtnH = 28;
+      const testBtnX = this.width - testBtnW - 15, testBtnY = this.height - 50;
+      if (x >= testBtnX && x <= testBtnX + testBtnW && y >= testBtnY && y <= testBtnY + testBtnH) {
+        this.state = STATE.TEST_MODE;
+        this._showTestModeUI();
+        return;
+      }
+      // 标题页点击进入选英雄（测试模式下不响应普通点击）
+      if (this.state === STATE.TITLE) {
+        this.state = STATE.SELECT_HERO;
+      }
     } else if (this.state === STATE.SELECT_HERO) {
       this._handleHeroClick(x, y);
     } else if (this.state === STATE.GAME_OVER) {
@@ -1407,7 +1741,8 @@ export class Game {
       const btnX = cx - btnW / 2, btnY = cy + 95;
       if (x >= btnX && x <= btnX + btnW && y >= btnY && y <= btnY + btnH) {
         // 进入关卡过渡
-        this.stageTransitionTimer = this.stageTransitionDuration;
+        const nextStage = STAGES[this.currentStage];
+        this.stageTransitionTimer = (nextStage && nextStage.id === 3) ? 2.5 : this.stageTransitionDuration;
         this.state = STATE.STAGE_TRANSITION;
       }
     } else {

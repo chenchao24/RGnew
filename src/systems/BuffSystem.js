@@ -141,6 +141,12 @@ export class BuffSystem {
     }
 
     this._enforceCaps(player);
+
+    // NaN保护：确保maxHp不为NaN或undefined
+    if (!player.maxHp || isNaN(player.maxHp)) player.maxHp = baseConfig.HP || 100;
+    if (isNaN(player.hp) || player.hp === undefined) player.hp = player.maxHp;
+    // HP比例同步：如果HP超出新的maxHp上限则修正
+    if (player.hp > player.maxHp) player.hp = player.maxHp;
   }
 
   /**

@@ -50,6 +50,17 @@ export async function preloadSprites() {
     'assets/sprites/boss/boss_phase3.png',
     'assets/sprites/boss2/boss_idle.png',
     'assets/sprites/boss2/boss_phase2.png',
+    'assets/sprites/boss3/boss_idle.png',
+    'assets/sprites/boss3/boss_phase2.png',
+    'assets/sprites/effects/meteor/meteor_fall.png',
+    'assets/sprites/monsters3/normal_front.png',
+    'assets/sprites/monsters3/fast_front.png',
+    'assets/sprites/monsters3/tank_front.png',
+    'assets/sprites/monsters3/bomber_front.png',
+    'assets/sprites/monsters3/ranged_front.png',
+    'assets/sprites/monsters3/shocker_front.png',
+    'assets/sprites/monsters3/golem_front.png',
+    'assets/bg/stage3/ground.png',
     'assets/sprites/swords/sword_blade.png',
     'assets/sprites/swords/mage/sword_blade.png',
     'assets/sprites/mage/mage_front.png',
@@ -251,6 +262,58 @@ export function drawMonsterPlaceholder(ctx, monster) {
         ctx.arc(r + 6, 0, 6, 0, Math.PI * 2);
         ctx.fill();
       }
+      break;
+
+    case 'shocker':
+      // 六边形（震荡怪）
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // 震荡波指示
+      if (monster.shockWaveActive) {
+        ctx.strokeStyle = 'rgba(68,102,221,0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // 眼睛
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(r * 0.3, -r * 0.3, 3, 0, Math.PI * 2);
+      ctx.arc(r * 0.3, r * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(r * 0.35, -r * 0.3, 1.5, 0, Math.PI * 2);
+      ctx.arc(r * 0.35, r * 0.3, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+
+    case 'golem':
+      // 大圆形（巨石怪）
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      // 石纹条纹
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.6, -r * 0.2);
+      ctx.lineTo(r * 0.4, r * 0.1);
+      ctx.moveTo(-r * 0.3, r * 0.4);
+      ctx.lineTo(r * 0.5, -r * 0.3);
+      ctx.stroke();
+      // 眼睛
+      ctx.fillStyle = '#ff4400';
+      ctx.beginPath();
+      ctx.arc(r * 0.25, -r * 0.25, 4, 0, Math.PI * 2);
+      ctx.arc(r * 0.25, r * 0.25, 4, 0, Math.PI * 2);
+      ctx.fill();
       break;
   }
 

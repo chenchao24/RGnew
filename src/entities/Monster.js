@@ -3,7 +3,7 @@
  * 包含AI状态机和朝向系统
  */
 
-import { MONSTER_TYPES, MONSTER_STATES } from '../config/monsters.js';
+import { MONSTER_TYPES, MONSTER_STATES, STAGE3_MONSTER_SPRITES } from '../config/monsters.js';
 import { BALANCE } from '../config/balance.js';
 import { distance, angleTo } from '../utils/MathUtils.js';
 import { drawMonsterPlaceholder, getSprite } from '../utils/SpriteManager.js';
@@ -11,13 +11,14 @@ import { drawMonsterPlaceholder, getSprite } from '../utils/SpriteManager.js';
 let nextMonsterId = 1;
 
 export class Monster {
-  constructor(type, x, y, waveConfig) {
+  constructor(type, x, y, waveConfig, stageIndex) {
     this.id = nextMonsterId++;
     this.template = MONSTER_TYPES[type];
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
+    this.stageIndex = stageIndex || 1;
 
     // 应用波次倍率
     this.hp = Math.round(this.template.hp * waveConfig.hpMultiplier);
@@ -50,6 +51,12 @@ export class Monster {
     this.explosionTimer = 0;
     this.shootTimer = 0;
     this.shootFlashTimer = 0;
+
+    // 震荡怪参数
+    this.shockCooldownTimer = type === 'SHOCKER' ? this.template.shockCooldown : 0;
+    this.shockWaveRadius = 0;
+    this.shockWaveTimer = 0;
+    this.shockWaveActive = false;
 
     // 元素状态
     this.fireTimer = 0;
@@ -191,6 +198,34 @@ export class Monster {
       }
     }
 
+    // 震荡怪震荡波逻辑
+    if (this.type === 'SHOCKER' && this.state === MONSTER_STATES.CHASE) {
+      this.shockCooldownTimer -= dt;
+      if (this.shockCooldownTimer <= 0) {
+        this.shockCooldownTimer = this.template.shockCooldown;
+        this.shockWaveActive = true;
+        this.shockWaveRadius = 0;
+        this.shockWaveTimer = 0;
+        return {
+          shockWave: true,
+          x: this.x,
+          y: this.y,
+          radius: this.template.shockRadius,
+          slowPercent: this.template.shockSlowPercent,
+          slowDuration: this.template.shockSlowDuration,
+        };
+      }
+    }
+
+    // 震荡波动画更新
+    if (this.shockWaveActive) {
+      this.shockWaveTimer += dt;
+      this.shockWaveRadius = (this.shockWaveTimer / 0.4) * this.template.shockRadius;
+      if (this.shockWaveTimer >= 0.4) {
+        this.shockWaveActive = false;
+      }
+    }
+
     return null;
   }
 
@@ -299,15 +334,25 @@ export class Monster {
   render(ctx) {
     if (!this.alive) return;
 
-    // 怪物图片映射：template.id -> { front, back }
-    const SPRITE_MAP = {
+    // 怪物图片映射：第三关使用monsters3路径
+    const DEFAULT_SPRITE_MAP = {
       normal: { front: 'assets/sprites/monsters/normal_front.png', back: 'assets/sprites/monsters/normal_back.png' },
       fast:   { front: 'assets/sprites/monsters/fast_front.png' },
       tank:   { front: 'assets/sprites/monsters/tank_front.png' },
       bomber: { front: 'assets/sprites/monsters/bomber_front.png' },
       ranged: { front: 'assets/sprites/monsters/ranged_front.png' },
+      shocker: { front: 'assets/sprites/monsters3/shocker_front.png' },
+      golem:   { front: 'assets/sprites/monsters3/golem_front.png' },
     };
 
+    // 第三关使用新素材路径
+    let SPRITE_MAP = DEFAULT_SPRITE_MAP;
+    if (this.stageIndex >= 3 && STAGE3_MONSTER_SPRITES[this.type]) {
+      SPRITE_MAP = {};
+      for (const [key, path] of Object.entries(STAGE3_MONSTER_SPRITES)) {
+        SPRITE_MAP[key.toLowerCase()] = { front: path };
+      }
+    }
     const spriteInfo = SPRITE_MAP[this.template.id];
     if (spriteInfo) {
       const frontImg = spriteInfo.front ? getSprite(spriteInfo.front) : null;
@@ -343,6 +388,18 @@ export class Monster {
         ctx.restore();
         return;
       }
+    }
+
+    // 震荡波视觉效果
+    if (this.shockWaveActive) {
+      ctx.save();
+      const alpha = 1 - this.shockWaveTimer / 0.4;
+      ctx.strokeStyle = `rgba(68,102,221,${alpha * 0.7})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.shockWaveRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 无图片资源，使用占位绘制

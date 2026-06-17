@@ -93,6 +93,52 @@ export const MONSTER_TYPES = {
     projectileRadius: 8,
     stopDistance: 120,
   },
+  SHOCKER: {
+    id: 'shocker',
+    name: '震荡怪',
+    hp: 40,
+    damage: 12,
+    speed: 65,
+    collisionRadius: 22,
+    exp: 15,
+    attackRange: 35,
+    attackWindup: 0.3,
+    attackCooldown: 0.6,
+    color: '#4466dd',
+    bodyRadius: 22,
+    hasFrontFace: true,
+    // 震荡波参数
+    shockCooldown: 5,
+    shockRadius: 80,
+    shockSlowPercent: 0.4,
+    shockSlowDuration: 2,
+  },
+  GOLEM: {
+    id: 'golem',
+    name: '巨石怪',
+    hp: 120,
+    damage: 25,
+    speed: 45,
+    collisionRadius: 26,
+    exp: 20,
+    attackRange: 40,
+    attackWindup: 0.4,
+    attackCooldown: 0.8,
+    color: '#553322',
+    bodyRadius: 26,
+    hasFrontFace: true,
+  },
+};
+
+// 第三关怪物精灵路径映射（所有类型使用新素材）
+export const STAGE3_MONSTER_SPRITES = {
+  NORMAL: 'assets/sprites/monsters3/normal_front.png',
+  FAST: 'assets/sprites/monsters3/fast_front.png',
+  TANK: 'assets/sprites/monsters3/tank_front.png',
+  BOMBER: 'assets/sprites/monsters3/bomber_front.png',
+  RANGED: 'assets/sprites/monsters3/ranged_front.png',
+  SHOCKER: 'assets/sprites/monsters3/shocker_front.png',
+  GOLEM: 'assets/sprites/monsters3/golem_front.png',
 };
 
 // 怪物AI状态

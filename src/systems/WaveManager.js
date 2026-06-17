@@ -2,13 +2,14 @@
  * 波次管理系统
  */
 
-import { SPECIAL_MONSTER_TYPES } from '../config/waves.js';
+import { SPECIAL_MONSTER_TYPES, getSpecialTypesForWave } from '../config/waves.js';
 import { BALANCE } from '../config/balance.js';
 import { Monster } from '../entities/Monster.js';
 
 export class WaveManager {
-  constructor(waveConfigs) {
+  constructor(waveConfigs, stageIndex) {
     this.waveConfigs = waveConfigs;
+    this.stageIndex = stageIndex || 1;
     this.totalWaves = waveConfigs.length;
     this.currentWave = 0;
     this.waveTimer = 0;
@@ -19,6 +20,11 @@ export class WaveManager {
     // 当前波次的怪物生成队列
     this.spawnQueue = [];
     this.spawnTimer = 0;
+
+    // 外围增援队列（第三关1-6波）
+    this.reinforcementQueue = [];
+    this.reinforcementTimer = 0;
+    this.reinforcementTriggered = false;
 
     // 波次提示
     this.waveAnnouncement = null;
@@ -56,7 +62,8 @@ export class WaveManager {
     }
 
     for (let i = 0; i < specialCount; i++) {
-      const type = SPECIAL_MONSTER_TYPES[i % SPECIAL_MONSTER_TYPES.length];
+      const types = getSpecialTypesForWave(this.stageIndex, this.currentWave);
+      const type = types[i % types.length];
       this.spawnQueue.push({ type, delay: Math.random() * 0.5 });
     }
 
@@ -71,6 +78,12 @@ export class WaveManager {
     this.announcementTimer = 2;
 
     this.spawnTimer = 0;
+
+    // 第三关外围增援初始化
+    this.reinforcementQueue = [];
+    this.reinforcementTimer = 0;
+    this.reinforcementTriggered = false;
+    this.reinforcementSpawned = false;
   }
 
   /**
@@ -106,14 +119,39 @@ export class WaveManager {
 
       for (const spawn of toSpawn) {
         const pos = collisionSystem.getSafeSpawnPosition(playerX, playerY, BALANCE.SAFE_SPAWN_DISTANCE);
-        const monster = new Monster(spawn.type, pos.x, pos.y, this.waveConfigs[this.currentWave - 1]);
+        const monster = new Monster(spawn.type, pos.x, pos.y, this.waveConfigs[this.currentWave - 1], this.stageIndex);
         newMonsters.push(monster);
       }
     }
 
-    // 波次结束检测
-    if (this.waveActive && this.waveTimer <= 0 && this.spawnQueue.length === 0) {
-      this.waveActive = false;
+    // 第三关外围增援检测（1-6波，主波次刷完后间隔delay秒再刷一波外围）
+    // 只触发一次：用 reinforcementSpawned 标记是否已刷过增援
+    if (this.waveActive && this.spawnQueue.length === 0 && !this.reinforcementSpawned) {
+      const waveConfig = this.waveConfigs[this.currentWave - 1];
+      if (waveConfig.reinforcement && !this.reinforcementTriggered) {
+        this.reinforcementTriggered = true;
+        this.reinforcementTimer = waveConfig.reinforcement.delay;
+      }
+    }
+
+    // 外围增援计时
+    if (this.reinforcementTriggered && this.reinforcementTimer > 0) {
+      this.reinforcementTimer -= dt;
+      if (this.reinforcementTimer <= 0) {
+        const waveConfig = this.waveConfigs[this.currentWave - 1];
+        if (waveConfig.reinforcement && activeMonsters < BALANCE.MAX_MONSTERS_ON_SCREEN) {
+          const rCount = waveConfig.reinforcement.count;
+          for (let i = 0; i < rCount; i++) {
+            const type = Math.random() < 0.3 ? 'FAST' : 'NORMAL';
+            // 从地图边缘生成
+            const pos = this._getEdgeSpawnPosition();
+            const monster = new Monster(type, pos.x, pos.y, waveConfig, this.stageIndex);
+            newMonsters.push(monster);
+          }
+        }
+        this.reinforcementTriggered = false;
+        this.reinforcementSpawned = true; // 标记增援已刷，防止重复触发
+      }
     }
 
     return newMonsters;
@@ -128,10 +166,24 @@ export class WaveManager {
   }
 
   /**
-   * 检查当前波次是否结束（所有怪物清完）
+   * 检查当前波次是否结束
+   * 新规则：所有已刷出的怪全部死亡即算波次完成
+   * 未刷出的不再刷新
    */
   isWaveComplete(aliveMonsterCount) {
-    return this.waveActive && this.spawnQueue.length === 0 && aliveMonsterCount === 0;
+    return this.waveActive && aliveMonsterCount === 0;
+  }
+
+  /**
+   * 清除当前波次未刷出的怪物和增援
+   */
+  clearPendingSpawns() {
+    this.spawnQueue = [];
+    this.reinforcementQueue = [];
+    this.reinforcementTriggered = false;
+    this.reinforcementTimer = 0;
+    this.reinforcementSpawned = false;
+    this.waveActive = false;
   }
 
   /**
@@ -152,5 +204,20 @@ export class WaveManager {
 
   getWaveAnnouncement() {
     return this.waveAnnouncement;
+  }
+
+  /**
+   * 从地图边缘获取生成位置
+   */
+  _getEdgeSpawnPosition() {
+    const side = Math.floor(Math.random() * 4);
+    const margin = 30;
+    switch (side) {
+      case 0: return { x: Math.random() * 1200, y: margin };           // 上
+      case 1: return { x: Math.random() * 1200, y: 800 - margin };     // 下
+      case 2: return { x: margin, y: Math.random() * 800 };            // 左
+      case 3: return { x: 1200 - margin, y: Math.random() * 800 };    // 右
+      default: return { x: margin, y: margin };
+    }
   }
 }

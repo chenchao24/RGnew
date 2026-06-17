@@ -77,8 +77,23 @@ export const STAGE2_WAVE_CONFIG = [
   { wave: 10, monsterCount: 118, specialRatio: 0.73, hpMultiplier: 5.38, damageMultiplier: 2.81, speedMultiplier: 1.60, expMultiplier: 2.19 },
 ];
 
+// === 第三关波次配置 ===
+// 大幅强化，1-6波有外围增援，经验倍率最高2.0
+export const STAGE3_WAVE_CONFIG = [
+  { wave: 1,  monsterCount: 48,  specialRatio: 0.20, hpMultiplier: 2.50, damageMultiplier: 1.60, speedMultiplier: 1.20, expMultiplier: 1.30, reinforcement: { count: 8, delay: 3.5 } },
+  { wave: 2,  monsterCount: 58,  specialRatio: 0.25, hpMultiplier: 3.00, damageMultiplier: 1.80, speedMultiplier: 1.25, expMultiplier: 1.40, reinforcement: { count: 10, delay: 3.5 } },
+  { wave: 3,  monsterCount: 70,  specialRatio: 0.30, hpMultiplier: 3.60, damageMultiplier: 2.00, speedMultiplier: 1.30, expMultiplier: 1.50, reinforcement: { count: 12, delay: 3.5 } },
+  { wave: 4,  monsterCount: 83,  specialRatio: 0.35, hpMultiplier: 4.30, damageMultiplier: 2.25, speedMultiplier: 1.35, expMultiplier: 1.60, reinforcement: { count: 14, delay: 3.5 } },
+  { wave: 5,  monsterCount: 96,  specialRatio: 0.40, hpMultiplier: 5.20, damageMultiplier: 2.55, speedMultiplier: 1.40, expMultiplier: 1.70, reinforcement: { count: 16, delay: 3.5 } },
+  { wave: 6,  monsterCount: 110, specialRatio: 0.45, hpMultiplier: 6.20, damageMultiplier: 2.85, speedMultiplier: 1.45, expMultiplier: 1.80, reinforcement: { count: 18, delay: 3.5 } },
+  { wave: 7,  monsterCount: 125, specialRatio: 0.50, hpMultiplier: 7.40, damageMultiplier: 3.20, speedMultiplier: 1.50, expMultiplier: 1.85 },
+  { wave: 8,  monsterCount: 138, specialRatio: 0.55, hpMultiplier: 8.80, damageMultiplier: 3.60, speedMultiplier: 1.55, expMultiplier: 1.90 },
+  { wave: 9,  monsterCount: 152, specialRatio: 0.60, hpMultiplier: 10.50, damageMultiplier: 4.05, speedMultiplier: 1.60, expMultiplier: 1.95 },
+  { wave: 10, monsterCount: 168, specialRatio: 0.65, hpMultiplier: 12.50, damageMultiplier: 4.55, speedMultiplier: 1.65, expMultiplier: 2.00 },
+];
+
 // 所有关卡波次配置表（按关卡索引，1-based）
-const ALL_STAGE_WAVES = [WAVE_CONFIG, STAGE2_WAVE_CONFIG];
+const ALL_STAGE_WAVES = [WAVE_CONFIG, STAGE2_WAVE_CONFIG, STAGE3_WAVE_CONFIG];
 
 /**
  * 获取指定关卡的波次配置
@@ -105,4 +120,23 @@ export function getWaveCountForStage(stageIndex) {
 export const TOTAL_WAVES = WAVE_CONFIG.length;
 
 // 特殊怪类型列表（从普通怪中替换）
-export const SPECIAL_MONSTER_TYPES = ['FAST', 'TANK', 'BOMBER', 'RANGED'];
+export const SPECIAL_MONSTER_TYPES = ['FAST', 'TANK', 'BOMBER', 'RANGED', 'SHOCKER', 'GOLEM'];
+
+/**
+ * 获取指定关卡/波次的特殊怪类型池
+ * @param {number} stageIndex - 关卡索引（1-based）
+ * @param {number} wave - 波次（1-based）
+ * @returns {Array} 可用特殊怪类型列表
+ */
+export function getSpecialTypesForWave(stageIndex, wave) {
+  if (stageIndex <= 1) {
+    return ['FAST', 'TANK', 'BOMBER', 'RANGED'];
+  }
+  if (stageIndex === 2) {
+    return ['FAST', 'TANK', 'BOMBER', 'RANGED'];
+  }
+  // 第三关：根据波次递增开放
+  if (wave <= 3) return ['FAST', 'TANK', 'BOMBER', 'RANGED', 'SHOCKER'];
+  if (wave <= 6) return ['FAST', 'TANK', 'BOMBER', 'RANGED', 'SHOCKER'];
+  return ['FAST', 'TANK', 'BOMBER', 'RANGED', 'SHOCKER', 'GOLEM'];
+}

@@ -129,6 +129,92 @@ export const BOSS2_CONFIG = {
   },
 };
 
+// ============================================================
+// 地狱领主 (Hell Lord) - 第三关Boss，两阶段
+// 超高血量、高速度、高伤害、三大技能随机轮转
+// ============================================================
+export const BOSS3_CONFIG = {
+  name: '地狱领主',
+  hp: 15000,
+  damage: 350,
+  speed: 100,
+  collisionRadius: 45,
+  attackRange: 55,
+  attackWindup: 0.5,
+  attackCooldown: 0.8,
+  exp: 800,
+  dodgeChance: 0,
+
+  // 视觉
+  color: '#aa1100',
+  bodyRadius: 45,
+  coreColor: '#ff4400',
+
+  // 登场
+  spawnDuration: 2.0,
+
+  // 阶段阈值
+  phaseThresholds: [0.20],
+
+  // 阶段转换
+  phaseTransition: {
+    invincibleTime: 1.0,
+    shakeDuration: 0.5,
+    shakeIntensity: 15,
+  },
+
+  // 阶段1: 100% → 20% 追逐+三大技能轮转
+  phase1: {
+    speedMultiplier: 1.0,
+    damageMultiplier: 1.0,
+    skillCooldown: 6,
+    crossWave: {
+      beamCount: 4, beamWidth: 38, beamRange: 900, beamDuration: 2.0,
+      beamDamage: 55, tickInterval: 0.3, windup: 1.0,
+      projectileCount: 16, projectileSpeed: 260, projectileDamage: 30, projectileRadius: 10,
+    },
+    meteorRain: { count: 6, damage: 55, aoeRadius: 55, warnTime: 1.2, interval: 0.25, spreadRadius: 130, shakeIntensity: 8, shakeDuration: 0.15, sprite: 'assets/sprites/effects/meteor/meteor_fall.png' },
+    flameAura: { duration: 4, radius: 100, dps: 25, tickInterval: 0.5 },
+  },
+
+  // 阶段2: 20% → 0% 狂暴，体型变大，技能更强更快
+  phase2: {
+    speedMultiplier: 1.6,
+    damageMultiplier: 2.0,
+    skillCooldown: 4,
+    crossWave: {
+      beamCount: 8, beamWidth: 44, beamRange: 900, beamDuration: 2.5,
+      beamDamage: 75, tickInterval: 0.25, windup: 0.8,
+      projectileCount: 24, projectileSpeed: 300, projectileDamage: 40, projectileRadius: 12,
+    },
+    meteorRain: { count: 10, damage: 75, aoeRadius: 65, warnTime: 1.0, interval: 0.18, spreadRadius: 160, shakeIntensity: 12, shakeDuration: 0.15, sprite: 'assets/sprites/effects/meteor/meteor_fall.png' },
+    flameAura: { duration: 5, radius: 140, dps: 40, tickInterval: 0.5 },
+    color: '#ff0000',
+    bodyRadius: 70,
+  },
+
+  // Boss关小怪刷新
+  bossMinion: {
+    interval: 6,
+    count: 10,
+    types: ['NORMAL', 'NORMAL', 'NORMAL', 'FAST', 'FAST', 'SHOCKER'],
+  },
+
+  // 怒吼语言（每隔一个技能喊一次）
+  roars: {
+    spawn: { text: '体验绝望吧，冒险者，你将葬身于此！', duration: 5.5 },
+    crossWave: { text: '凡人，颤抖吧，审判之光！', duration: 4.0 },
+    meteorRain: { text: '感受地狱的愤怒吧，该死的蝼蚁！', duration: 4.0 },
+    flameAura: { text: '死远点，该死的臭虫！', duration: 4.0 },
+  },
+
+  // 精灵路径
+  sprites: {
+    1: 'assets/sprites/boss3/boss_idle.png',
+    2: 'assets/sprites/boss3/boss_phase2.png',
+  },
+};
+
 /**
  * 获取指定关卡的Boss配置
  * @param {number} stageIndex - 关卡索引（1-based）
@@ -138,6 +224,7 @@ export function getBossConfigForStage(stageIndex) {
   const bossMap = {
     1: BOSS_CONFIG,
     2: BOSS2_CONFIG,
+    3: BOSS3_CONFIG,
   };
   return bossMap[stageIndex] || BOSS_CONFIG;
 }
@@ -156,6 +243,11 @@ export const BOSS_STATES = {
   BARRAGE: 'barrage',
   RAY_WINDUP: 'ray_windup',
   RAY: 'ray',
+  CROSSWAVE_WINDUP: 'crosswave_windup',
+  CROSSWAVE: 'crosswave',
+  METEOR_WINDUP: 'meteor_windup',
+  METEOR: 'meteor',
+  FLAME_AURA: 'flame_aura',
   PHASE_TRANSITION: 'phase_transition',
   SUMMON: 'summon',
   DEAD: 'dead',

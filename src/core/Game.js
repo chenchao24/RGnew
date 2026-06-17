@@ -1284,8 +1284,52 @@ export class Game {
 
   _renderHUD(ctx) {
     const p = this.player;
-    // HP条
-    const hpW = 300, hpH = 20, hpX = (this.width - hpW) / 2, hpY = 15;
+
+    // 角色头像（血条左侧，70px）
+    const heroId = p.heroId || 'paladin';
+    const avatarPath = `assets/sprites/avatar/${heroId}.png`;
+    const avatarSize = 70;
+    const avatarX = (this.width - 300) / 2 - avatarSize - 8;
+    const avatarY = 8;
+    const avatarImg = getSprite(avatarPath);
+    if (avatarImg) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
+      ctx.restore();
+      // 头像边框
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      // 无头像时的占位：圆形底色 + 角色图标字
+      const hero = HEROES.find(h => h.id === heroId);
+      const heroColor = hero ? hero.color : '#555';
+      const heroChar = hero ? hero.iconChar : '?';
+      ctx.fillStyle = heroColor;
+      ctx.beginPath();
+      ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 28px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(heroChar, avatarX + avatarSize / 2, avatarY + avatarSize / 2 + 10);
+    }
+
+    // HP条（在头像右侧对齐）
+    const hpW = 300, hpH = 20;
+    const hpX = avatarX + avatarSize + 8;
+    const hpY = avatarY + (avatarSize - hpH) / 2;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(hpX - 2, hpY - 2, hpW + 4, hpH + 4);
     ctx.fillStyle = '#333';
@@ -1297,10 +1341,10 @@ export class Game {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 14px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${p.hp} / ${p.maxHp}`, this.width / 2, hpY + 15);
+    ctx.fillText(`${p.hp} / ${p.maxHp}`, hpX + hpW / 2, hpY + 15);
 
-    // 经验条
-    const eW = 200, eH = 8, eX = (this.width - eW) / 2, eY = hpY + hpH + 6;
+    // 经验条（血条下方）
+    const eW = hpW, eH = 8, eX = hpX, eY = hpY + hpH + 6;
     ctx.fillStyle = '#222';
     ctx.fillRect(eX, eY, eW, eH);
     ctx.fillStyle = '#4488ff';
